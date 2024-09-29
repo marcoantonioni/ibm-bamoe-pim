@@ -1,0 +1,119 @@
+
+https://github.com/kiegroup/droolsjbpm-integration/blob/main/kie-server-parent/kie-server-remote/kie-server-client/src/main/java/org/kie/server/client/admin/ProcessAdminServicesClient.java
+https://github.com/kiegroup/droolsjbpm-integration/blob/main/kie-server-parent/kie-server-remote/kie-server-client/src/main/java/org/kie/server/client/admin/impl/ProcessAdminServicesClientImpl.java
+https://github.com/kiegroup/droolsjbpm-integration/blob/main/kie-server-parent/kie-server-remote/kie-server-client/src/main/java/org/kie/server/client/impl/AbstractKieServicesClientImpl.java
+
+https://docs.redhat.com/en/documentation/red_hat_process_automation_manager/7.13/html-single/developing_process_services_in_red_hat_process_automation_manager/index#process-instance-migration-con
+https://github.com/kiegroup/process-migration-service
+
+
+#----------------------------
+
+/home/marco/projects/ibamoe/repos/ibm-bamoe-oneshot-installation
+code .
+
+#----------------------------
+
+# crea tabelle PIM
+cd /home/marco/Downloads/bam805/process-migration
+
+PGPASSWORD=${KIE_PWD} psql -U ${KIE_USER} -h 127.0.0.1 -d ${BAMOE_DB_NAME} -f /tmp/postgresql-quartz-schema.sql
+PGPASSWORD=${KIE_PWD} psql -U ${KIE_USER} -h 127.0.0.1 -d ${BAMOE_DB_NAME} -f /tmp/postgresql-pim-schema.sql
+
+#----------------------------
+# crea file yaml per server e db (servers.yaml, datasource.yaml)
+cd /home/marco/Downloads/bam805/process-migration
+
+#----------------------------
+vi ./servers.yaml
+
+kieservers:
+  - host: http://localhost:8080/kie-server/services/rest/server
+    username: admin
+    password: passw0rd
+
+
+#----------------------------
+vi ./datasource.yaml
+
+quarkus:
+  datasource:
+    db-kind: postgresql
+    jdbc:
+      url: jdbc:postgresql://localhost:5432/kieserver01
+    username: kieserver
+    password: kie01server
+
+#----------------------------
+# rebuild app
+cp ./quarkus-app/quarkus-run.jar ./quarkus-app/quarkus-run.jar.old
+
+java -jar -Dquarkus.launch.rebuild=true -Dquarkus.datasource.db-kind=postgresql quarkus-app/quarkus-run.jar
+
+#----------------------------
+# run app
+java -jar -Dquarkus.http.port=8090 -Dquarkus.config.locations=servers.yaml,datasource.yaml quarkus-app/quarkus-run.jar
+
+#----------------------------
+http://localhost:8090/
+admin / admin1!
+
+#----------------------------
+
+USER_PASSWORD=admin:passw0rd
+SERVER_URL=http://localhost:8080/kie-server
+
+PRC_ID="TestVersions.TestProcess"
+
+CTR_ID="TestVersions_1.0.0-SNAPSHOT"
+
+CTR_ID="TestVersions_2.0.0-SNAPSHOT"
+
+# avvia istanza
+_NAME="Pippo"
+curl -s -k -u ${USER_PASSWORD} -H 'content-type: application/json' -H 'accept: application/json' -X POST "${SERVER_URL}/services/rest/server/containers/${CTR_ID}/processes/${PRC_ID}/instances"  -d '{ "name": "'${_NAME}'"}' | jq .
+
+# lista istanze attive
+curl -s -k -u ${USER_PASSWORD} -H 'content-type: application/json' -H 'accept: application/json' -X GET "${SERVER_URL}/services/rest/server/containers/${CTR_ID}/processes/instances?status=1&sortOrder=true" | jq .
+
+# lista task di una istanza
+PROC_INST_ID=2
+curl -s -k -u ${USER_PASSWORD} -H 'content-type: application/json' -H 'accept: application/json' -X GET "${SERVER_URL}/services/rest/server/queries/tasks/instances/process/${PROC_INST_ID}?status=Created&status=Ready&status=Reserved&page=0&pageSize=10&sortOrder=true" | jq .
+
+
+
+#----------------------------
+# esempio plan
+
+{
+  "name": "TestPlan1",
+  "description": "App TestVersions",
+  "source": {
+    "containerId": "TestVersions_1.0.0-SNAPSHOT",
+    "processId": "TestVersions.TestProcess"
+  },
+  "target": {
+    "containerId": "TestVersions_2.0.0-SNAPSHOT",
+    "processId": "TestVersions.TestProcess"
+  },
+  "mappings": {}
+}
+
+
+
+#----------------------------
+# How to configure default HTTP Session Timeout on EAP 7
+https://access.redhat.com/solutions/2357941
+
+$JBOSS_HOME/bin/jboss-cli.sh --connect --command="/subsystem=undertow/servlet-container=default:read-attribute(name=default-session-timeout)"
+
+$JBOSS_HOME/bin/jboss-cli.sh --connect --command="/subsystem=undertow/servlet-container=default:write-attribute(name=default-session-timeout, value=480)"
+
+$JBOSS_HOME/bin/jboss-cli.sh --connect --command="reload"
+
+#--------------------------
+
+SERVER_GIT_URL=http://localhost:8080/business-central/git
+git clone ${SERVER_GIT_URL}/MySpace/TestSTP-v1.0
+git clone ${SERVER_GIT_URL}/MySpace/TestSTP
+git clone ${SERVER_GIT_URL}/MySpace/TestVersions
