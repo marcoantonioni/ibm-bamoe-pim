@@ -6,6 +6,15 @@ https://github.com/kiegroup/droolsjbpm-integration/blob/main/kie-server-parent/k
 https://docs.redhat.com/en/documentation/red_hat_process_automation_manager/7.13/html-single/developing_process_services_in_red_hat_process_automation_manager/index#process-instance-migration-con
 https://github.com/kiegroup/process-migration-service
 
+Limitazioni BAMOE PIM
+https://access.redhat.com/solutions/3599791
+
+#----------------------------
+# appunti e video
+/home/marco/projects/ibamoe/repos/ibm-bamoe-pim
+
+# da BC
+/home/marco/projects/ibamoe/repos/PIMProjects/
 
 #----------------------------
 
@@ -46,12 +55,16 @@ quarkus:
 
 #----------------------------
 # rebuild app
+
+cd /home/marco/Downloads/bam805/process-migration
+
 cp ./quarkus-app/quarkus-run.jar ./quarkus-app/quarkus-run.jar.old
 
 java -jar -Dquarkus.launch.rebuild=true -Dquarkus.datasource.db-kind=postgresql quarkus-app/quarkus-run.jar
 
 #----------------------------
 # run app
+cd /home/marco/Downloads/bam805/process-migration
 java -jar -Dquarkus.http.port=8090 -Dquarkus.config.locations=servers.yaml,datasource.yaml quarkus-app/quarkus-run.jar
 
 #----------------------------
@@ -65,13 +78,22 @@ SERVER_URL=http://localhost:8080/kie-server
 
 PRC_ID="TestVersions.TestProcess"
 
-CTR_ID="TestVersions_1.0.0-SNAPSHOT"
+PRC_ID="TestSTP.TestSTP"
 
+CTR_ID="TestVersions_1.0.0-SNAPSHOT"
 CTR_ID="TestVersions_2.0.0-SNAPSHOT"
 
-# avvia istanza
+CTR_ID="TestSTP-v1.0_1.0.0-SNAPSHOT"
+CTR_ID="TestSTP-v1.0_2.0.0-SNAPSHOT"
+
+
+# avvia istanza TestVersion
 _NAME="Pippo"
 curl -s -k -u ${USER_PASSWORD} -H 'content-type: application/json' -H 'accept: application/json' -X POST "${SERVER_URL}/services/rest/server/containers/${CTR_ID}/processes/${PRC_ID}/instances"  -d '{ "name": "'${_NAME}'"}' | jq .
+
+# avvia istanza TestSTP
+curl -s -k -u ${USER_PASSWORD} -H 'content-type: application/json' -H 'accept: application/json' -X POST "${SERVER_URL}/services/rest/server/containers/${CTR_ID}/processes/${PRC_ID}/instances"  -d '{ "delay": 3000, "crash": true }' | jq .
+
 
 # lista istanze attive
 curl -s -k -u ${USER_PASSWORD} -H 'content-type: application/json' -H 'accept: application/json' -X GET "${SERVER_URL}/services/rest/server/containers/${CTR_ID}/processes/instances?status=1&sortOrder=true" | jq .
@@ -81,6 +103,9 @@ PROC_INST_ID=2
 curl -s -k -u ${USER_PASSWORD} -H 'content-type: application/json' -H 'accept: application/json' -X GET "${SERVER_URL}/services/rest/server/queries/tasks/instances/process/${PROC_INST_ID}?status=Created&status=Ready&status=Reserved&page=0&pageSize=10&sortOrder=true" | jq .
 
 
+# trigger node
+PROC_NODE_ID=5
+curl -s -k -u ${USER_PASSWORD} -H 'content-type: application/json' -H 'accept: application/json' -X POST "${SERVER_URL}/services/rest/server/admin/containers/${CTR_ID}/processes/instances/${PROC_INST_ID}/nodes/${PROC_NODE_ID}" -H "accept: application/json"
 
 #----------------------------
 # esempio plan
